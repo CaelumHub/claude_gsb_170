@@ -475,7 +475,9 @@ class VM:
     # ------------------------------------------------------------------
     def _name_error(self, ins, frame):
         name = ins.operand
-        candidates = set(self.globals.keys()) | set(self.builtins.keys())
+        # 候选 = 当前帧局部变量（形参/局部变量）+ 全局变量与函数 + 内置函数，
+        # 即该位置真正可见的全部名字
+        candidates = set(frame.locals.keys()) | set(self.globals.keys()) | set(self.builtins.keys())
         self._runtime_error(diag.runtime_name_error(
             name, sorted(candidates), ins.line, 1, self._line(ins.line)))
 

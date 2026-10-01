@@ -68,6 +68,16 @@ class SemanticAnalyzer:
             return self.source_lines[i]
         return ""
 
+    def _visible_names(self):
+        """收集当前位置真正可见的所有名字：沿作用域链向外（块 -> 函数 -> 全局），
+        全局作用域中包含用户函数与内置函数，供"你是不是想写 xxx"挑相近名字。"""
+        names = set()
+        scope = self.current_scope
+        while scope is not None:
+            names.update(scope.symbols.keys())
+            scope = scope.parent
+        return sorted(names)
+
     def _with_scope(self, scope_type, name, fn):
         prev = self.current_scope
         self.current_scope = self.symbols.new_scope(scope_type, name, prev)
@@ -212,7 +222,7 @@ class SemanticAnalyzer:
             s = self.current_scope.lookup(name)
             if s is None:
                 self.diagnostics.add(semantic_undefined_name(
-                    name, self.symbols.collect_names(sym.KIND_BUILTIN), stmt.target.line,
+                    name, self._visible_names(), stmt.target.line,
                     stmt.target.column, self._line(stmt.target)))
                 return
             if stmt.op == "=":
@@ -278,7 +288,7 @@ class SemanticAnalyzer:
         s = self.current_scope.lookup(e.name)
         if s is None:
             self.diagnostics.add(semantic_undefined_name(
-                e.name, self.symbols.collect_names(sym.KIND_BUILTIN), e.line, e.column, self._line(e)))
+                e.name, self._visible_names(), e.line, e.column, self._line(e)))
             e.expr_type = sym.TYPE_UNKNOWN
             return e.expr_type
         s.references += 1
@@ -312,7 +322,7 @@ class SemanticAnalyzer:
             s = self.current_scope.lookup(name)
             if s is None:
                 self.diagnostics.add(semantic_undefined_name(
-                    name, self.symbols.collect_names(sym.KIND_BUILTIN), e.callee.line,
+                    name, self._visible_names(), e.callee.line,
                     e.callee.column, self._line(e.callee)))
                 e.expr_type = sym.TYPE_UNKNOWN
                 return e.expr_type
