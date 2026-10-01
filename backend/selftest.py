@@ -147,9 +147,35 @@ def _test_runtime_errors():
 
     out3 = compiler.compile_source("var radius = 3;\nprint(radus);")
     errs3 = out3.diagnostics.errors()
-    ok3 = any("radus" in e.message and e.fix for e in errs3)
+    ok3 = any("radus" in e.message and "radius" in e.fix for e in errs3)
     _check("错误诊断：未定义变量带 did-you-mean 修复建议", ok3,
            str([(e.message, e.fix) for e in errs3]) if not ok3 else "")
+
+    # did-you-mean 应基于编辑距离，并覆盖该位置可见的名字（含函数内局部变量/形参）
+    out4 = compiler.compile_source(
+        "func area(radiuss) {\n"
+        "    var diameter = 2;\n"
+        "    return diamter * radiuss;\n"
+        "}\n"
+        "print(area(1));")
+    errs4 = out4.diagnostics.errors()
+    ok4 = any("diameter" in [r["name"] for r in e.related] for e in errs4)
+    _check("错误诊断：函数内局部变量进入 did-you-mean 候选", ok4,
+           str([(e.message, e.related) for e in errs4]) if not ok4 else "")
+
+    # 运行时未定义变量：候选应包含当前帧的局部变量
+    prog = compiler.compile_source("var g = 1;\nprint(g);").bytecode
+    vm5 = vm_mod.VM(prog, ["var g = 1;", "print(g);"])
+    frame5 = vm_mod.Frame("f", None)
+    frame5.locals["total_count"] = 5
+    from . import bytecode as bc_mod
+    ins5 = bc_mod.Instruction(bc_mod.OP_LOAD_VAR, "total_cout", 2, 0)
+    try:
+        vm5._name_error(ins5, frame5)
+        ok5 = False
+    except vm_mod.VMRuntimeError as e5:
+        ok5 = "total_count" in [r["name"] for r in e5.diagnostic.related]
+    _check("错误诊断：运行时未定义变量建议包含局部变量", ok5)
 
 
 def _test_debugger():

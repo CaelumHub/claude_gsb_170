@@ -101,6 +101,19 @@ class Scope:
             s = s.parent
         return None
 
+    def visible_names(self) -> List[str]:
+        """沿作用域链收集当前位置可见的所有名字（用于"你是不是想写"候选）。
+
+        与 lookup 的可见性规则一致：本作用域 + 各层外层作用域，
+        因此包含局部变量、形参、函数名与内置函数。
+        """
+        names = set()
+        s = self
+        while s is not None:
+            names.update(s.symbols.keys())
+            s = s.parent
+        return sorted(names)
+
     def depth(self) -> int:
         d = 0
         s = self

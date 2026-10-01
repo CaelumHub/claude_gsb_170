@@ -212,7 +212,7 @@ class SemanticAnalyzer:
             s = self.current_scope.lookup(name)
             if s is None:
                 self.diagnostics.add(semantic_undefined_name(
-                    name, self.symbols.collect_names(sym.KIND_BUILTIN), stmt.target.line,
+                    name, self.current_scope.visible_names(), stmt.target.line,
                     stmt.target.column, self._line(stmt.target)))
                 return
             if stmt.op == "=":
@@ -278,7 +278,7 @@ class SemanticAnalyzer:
         s = self.current_scope.lookup(e.name)
         if s is None:
             self.diagnostics.add(semantic_undefined_name(
-                e.name, self.symbols.collect_names(sym.KIND_BUILTIN), e.line, e.column, self._line(e)))
+                e.name, self.current_scope.visible_names(), e.line, e.column, self._line(e)))
             e.expr_type = sym.TYPE_UNKNOWN
             return e.expr_type
         s.references += 1
@@ -312,7 +312,7 @@ class SemanticAnalyzer:
             s = self.current_scope.lookup(name)
             if s is None:
                 self.diagnostics.add(semantic_undefined_name(
-                    name, self.symbols.collect_names(sym.KIND_BUILTIN), e.callee.line,
+                    name, self.current_scope.visible_names(), e.callee.line,
                     e.callee.column, self._line(e.callee)))
                 e.expr_type = sym.TYPE_UNKNOWN
                 return e.expr_type

@@ -475,7 +475,11 @@ class VM:
     # ------------------------------------------------------------------
     def _name_error(self, ins, frame):
         name = ins.operand
-        candidates = set(self.globals.keys()) | set(self.builtins.keys())
+        # 候选名 = 当前帧局部变量 + 全局变量 + 内置函数，
+        # 与 LOAD_VAR 的查找顺序（locals -> globals -> builtins）一致，
+        # 这样函数内的局部变量也能进入"你是不是想写"的建议。
+        candidates = (set(frame.locals.keys()) | set(self.globals.keys())
+                      | set(self.builtins.keys()))
         self._runtime_error(diag.runtime_name_error(
             name, sorted(candidates), ins.line, 1, self._line(ins.line)))
 
